@@ -1,0 +1,122 @@
+{
+  "182725474553986": {
+    "ability": "earth",
+    "wins": 0,
+    "moves": [
+      {
+        "name": "Strike",
+        "type": "attack",
+        "baseDamage": 15,
+        "desc": "Basic attack move"
+      },
+      {
+        "name": "Block",
+        "type": "defend",
+        "defensePercent": 50,
+        "desc": "Reduces damage taken by 50%"
+      },
+      {
+        "name": "Quick Jab",
+        "type": "attack",
+        "baseDamage": 10,
+        "desc": "Faster but weaker attack"
+      },
+      {
+        "name": "Guard",
+        "type": "defend",
+        "defensePercent": 30,
+        "desc": "Reduces damage by 30%"
+      }
+    ]
+  },
+  "212472703266847": {
+    "ability": "fire",
+    "wins": 0,
+    "moves": [
+      {
+        "name": "Strike",
+        "type": "attack",
+        "baseDamage": 15,
+        "desc": "Basic attack move"
+      },
+      {
+        "name": "Block",
+        "type": "defend",
+        "defensePercent": 50,
+        "desc": "Reduces damage taken by 50%"
+      },
+      {
+        "name": "Quick Jab",
+        "type": "attack",
+        "baseDamage": 10,
+        "desc": "Faster but weaker attack"
+      },
+      {
+        "name": "Guard",
+        "type": "defend",
+        "defensePercent": 30,
+        "desc": "Reduces damage by 30%"
+      }
+    ]
+  },
+  "2349122222622": {
+    "ability": "ice",
+    "wins": 0,
+    "moves": [
+      {
+        "name": "Strike",
+        "type": "attack",
+        "baseDamage": 15,
+        "desc": "Basic attack move"
+      },
+      {
+        "name": "Block",
+        "type": "defend",
+        "defensePercent": 50,
+        "desc": "Reduces damage taken by 50%"
+      },
+      {
+        "name": "Quick Jab",
+        "type": "attack",
+        "baseDamage": 10,
+        "desc": "Faster but weaker attack"
+      },
+      {
+        "name": "Guard",
+        "type": "defend",
+        "defensePercent": 30,
+        "desc": "Reduces damage by 30%"
+      }
+    ]
+  },
+  "2349029070127": {
+    "ability": "fire",
+    "wins": 0,
+    "moves": [
+      {
+        "name": "Strike",
+        "type": "attack",
+        "baseDamage": 15,
+        "desc": "Basic attack move"
+      },
+      {
+        "name": "Block",
+        "type": "defend",
+        "defensePercent": 50,
+        "desc": "Reduces damage taken by 50%"
+      },
+      {
+        "name": "Quick Jab",
+        "type": "attack",
+        "baseDamage": 10,
+        "desc": "Faster but weaker attack"
+      },
+      {
+        "name": "Guard",
+        "type": "defend",
+        "defensePercent": 30,
+        "desc": "Reduces damage by 30%"
+      }
+    ]
+  }
+}

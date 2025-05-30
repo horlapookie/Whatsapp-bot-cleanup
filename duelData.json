@@ -1,0 +1,36 @@
+{
+  "users": {
+    "2349122222622": {
+      "wins": 0,
+      "losses": 0,
+      "hp": 100,
+      "isInDuel": true,
+      "duelId": "1748460735665"
+    },
+    "2347080198262": {
+      "wins": 0,
+      "losses": 0,
+      "hp": 100,
+      "isInDuel": true,
+      "duelId": "1748460735665"
+    }
+  },
+  "duels": {
+    "1748460735665": {
+      "players": {
+        "2349122222622": {
+          "hp": 100,
+          "defending": false
+        },
+        "2347080198262": {
+          "hp": 100,
+          "defending": false
+        }
+      },
+      "turn": "2349122222622",
+      "winner": null,
+      "isActive": true
+    }
+  },
+  "leaderboard": {}
+}

@@ -1,0 +1,194 @@
+import {
+  makeWASocket,
+  useMultiFileAuthState,
+  fetchLatestBaileysVersion,
+  makeCacheableSignalKeyStore,
+  DisconnectReason,
+  jidNormalizedUser,
+} from '@whiskeysockets/baileys';
+import { Boom } from '@hapi/boom';
+import NodeCache from 'node-cache';
+import pino from 'pino';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import qrcode from 'qrcode-terminal';
+
+// Setup __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const commandsDir = path.join(__dirname, 'commands');
+
+const commandPrefix = '$';
+const ownerNumber = '2349122222622'; // Your number without @s.whatsapp.net
+const modNumbers = ['2347049044897']; // Mods array (no @...)
+
+let enableNsfw = false; // NSFW toggle
+
+// Load commands into Map
+const commands = new Map();
+
+async function loadCommands() {
+  console.log('[DEBUG] Found command files:', fs.readdirSync(commandsDir).filter(f => f.endsWith('.js')).join(', '));
+  const files = fs.readdirSync(commandsDir).filter(f => f.endsWith('.js'));
+  for (const file of files) {
+    try {
+      const { default: cmd } = await import(path.join(commandsDir, file));
+      if (cmd && cmd.name) {
+        commands.set(cmd.name.toLowerCase(), cmd);
+        console.log(`[DEBUG] Loaded command: ${cmd.name}`);
+      } else {
+        console.log(`[DEBUG] Skipped invalid command file: ${file}`);
+      }
+    } catch (e) {
+      console.error(`[ERROR] Failed to load command file ${file}:`, e);
+    }
+  }
+}
+await loadCommands();
+
+// Auth and cache
+const msgRetryCache = new NodeCache();
+console.log('[DEBUG] Loading authentication state from "Success" folder...');
+const { state, saveCreds } = await useMultiFileAuthState('Success');
+console.log('[DEBUG] Authentication state loaded.');
+
+// Fetch Baileys latest version
+const { version } = await fetchLatestBaileysVersion();
+console.log(`[DEBUG] Using Baileys version: ${version.join('.')}`);
+
+// Initialize socket
+const sock = makeWASocket({
+  version,
+  logger: pino({ level: 'silent' }),
+  printQRInTerminal: false,
+  auth: {
+    creds: state.creds,
+    keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })),
+  },
+  msgRetryCache,
+  generateHighQualityLinkPreview: true,
+  shouldIgnoreJid: jid => !jid || jid.endsWith('@broadcast'),
+});
+
+// Connection updates
+sock.ev.on('connection.update', update => {
+  const { connection, lastDisconnect, qr } = update;
+
+  if (qr) {
+    console.log('Scan this QR code to login:');
+    qrcode.generate(qr, { small: true });
+  }
+
+  if (connection === 'close') {
+    const statusCode = new Boom(lastDisconnect?.error).output.statusCode;
+    console.log(`[DEBUG] Connection closed with status code: ${statusCode}`);
+    if (statusCode === DisconnectReason.loggedOut) {
+      console.log('Logged out, deleting session...');
+      fs.rmSync('Success', { recursive: true, force: true });
+      process.exit(0);
+    } else {
+      console.log('Connection closed, reconnecting...');
+      process.exit(1);
+    }
+  } else if (connection === 'open') {
+    console.log('Bot connected successfully!');
+  }
+});
+
+sock.ev.on('creds.update', () => {
+  console.log('[DEBUG] Credentials updated, saving...');
+  saveCreds();
+});
+
+// Message handler
+sock.ev.on('messages.upsert', async ({ messages, type }) => {
+  if (type !== 'notify') return;
+
+  const msg = messages[0];
+  if (!msg.message || msg.key.fromMe) return;
+
+  const senderJid = msg.key.participant || msg.key.remoteJid;
+  const sender = jidNormalizedUser(senderJid);
+  const from = msg.key.remoteJid;
+
+  const isGroup = from.endsWith('@g.us');
+  const isOwner = sender === ownerNumber + '@s.whatsapp.net';
+  const isMod = isOwner || modNumbers.some(mod => sender.startsWith(mod));
+
+  let body =
+    msg.message.conversation ||
+    msg.message.extendedTextMessage?.text ||
+    msg.message.imageMessage?.caption ||
+    msg.message.videoMessage?.caption ||
+    '';
+
+  if (!body.startsWith(commandPrefix)) return;
+
+  const [cmdName, ...args] = body.slice(commandPrefix.length).trim().split(/\s+/);
+  const command = commands.get(cmdName.toLowerCase());
+
+  if (!command) {
+    console.log(`[DEBUG] Command not found: ${cmdName}`);
+    return;
+  }
+
+  // NSFW restriction
+  if (
+    ['xvideos', 'xget', 'fikfap', 'fikfapic'].includes(cmdName.toLowerCase()) &&
+    !enableNsfw &&
+    !isMod
+  ) {
+    console.log(`[DEBUG] NSFW command blocked for user ${sender} without permission: ${cmdName}`);
+    await sock.sendMessage(from, {
+      text: 'NSFW features are disabled. Ask an admin to enable with $nsfw on.',
+      mentions: [senderJid],
+    });
+    return;
+  }
+
+  try {
+    console.log(`[DEBUG] Executing command: ${cmdName} by ${sender} (${isOwner ? 'Owner' : isMod ? 'Mod' : 'User'})`);
+    await command.execute(msg, { sock, args, isGroup, isOwner, isMod, sender, from });
+  } catch (err) {
+    console.error('Command execution error:', err);
+    await sock.sendMessage(from, { text: 'An error occurred while executing that command.' });
+  }
+});
+
+// Built-in commands for toggling NSFW
+commands.set('nsfw', {
+  name: 'nsfw',
+  description: 'Toggle NSFW commands on/off (owner/mod only)',
+  async execute(msg, { sock, args, isMod }) {
+    if (!isMod) {
+      console.log(`[DEBUG] Permission denied for NSFW toggle by user ${jidNormalizedUser(msg.key.participant || msg.key.remoteJid)}`);
+      return sock.sendMessage(msg.key.remoteJid, { text: 'Permission denied.' });
+    }
+
+    const mode = args[0]?.toLowerCase();
+    if (mode === 'on') {
+      enableNsfw = true;
+      console.log(`[DEBUG] NSFW enabled by ${jidNormalizedUser(msg.key.participant || msg.key.remoteJid)}`);
+      return sock.sendMessage(msg.key.remoteJid, { text: 'NSFW features enabled.' });
+    } else if (mode === 'off') {
+      enableNsfw = false;
+      console.log(`[DEBUG] NSFW disabled by ${jidNormalizedUser(msg.key.participant || msg.key.remoteJid)}`);
+      return sock.sendMessage(msg.key.remoteJid, { text: 'NSFW features disabled.' });
+    } else {
+      return sock.sendMessage(msg.key.remoteJid, { text: 'Usage: $nsfw on/off' });
+    }
+  },
+});
+
+commands.set('enable', {
+  name: 'enable',
+  description: 'Show toggleable features status',
+  async execute(msg, { sock }) {
+    return sock.sendMessage(msg.key.remoteJid, {
+      text: `Toggleable features:\n- NSFW: ${enableNsfw ? 'ON' : 'OFF'}\n\nUse $nsfw on/off`,
+    });
+  },
+});
+
+console.log('Bot is running...');

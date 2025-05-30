@@ -1,0 +1,38 @@
+{
+  "2349122222622": {
+    "word": "",
+    "guessed": [],
+    "wrongGuesses": 0,
+    "wins": 0,
+    "losses": 3,
+    "revealed": []
+  },
+  "919233927901": {
+    "word": "",
+    "guessed": [],
+    "wrongGuesses": 0,
+    "wins": 0,
+    "losses": 1,
+    "revealed": []
+  },
+  "182725474553986": {
+    "word": "framework",
+    "guessed": [
+      "u"
+    ],
+    "wrongGuesses": 1,
+    "wins": 0,
+    "losses": 0,
+    "revealed": [
+      "_",
+      "_",
+      "_",
+      "_",
+      "_",
+      "_",
+      "_",
+      "_",
+      "_"
+    ]
+  }
+}
